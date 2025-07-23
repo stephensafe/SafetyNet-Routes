@@ -20,8 +20,7 @@
                 alert("Please enter a room name.");
                 return;
             }
-            const link = window.location.origin + '/room/' + encodeURIComponent(roomName);
-            window.location.href = link;
+            const link = window.location.origin + '/room.html?room=' + encodeURIComponent(roomName);
         }
 
         function generateRoom() {
