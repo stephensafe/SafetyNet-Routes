@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Encrypted Room - SafetyNet</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <h1>Welcome to your encrypted room 🔐</h1>
+    <p id="room-name"></p>
+
+    <div id="chat-box" style="border: 1px solid #ccc; padding: 10px; height: 300px; overflow-y: auto;"></div>
+
+    <input type="text" id="messageInput" placeholder="Type a message..." />
+    <button onclick="sendMessage()">Send</button>
+
+    <script>
+        // Get room name from query string
+        const params = new URLSearchParams(window.location.search);
+        const room = params.get('room');
+
+        if (!room) {
+            document.body.innerHTML = '<h2>❌ Invalid Room</h2><p>No room name provided.</p>';
+        } else {
+            document.getElementById('room-name').innerText = 'Room: ' + room;
+        }
+
+        // Basic send message simulation
+        function sendMessage() {
+            const input = document.getElementById('messageInput');
+            const chatBox = document.getElementById('chat-box');
+
+            if (input.value.trim() !== "") {
+                const msg = document.createElement('p');
+                msg.textContent = '🗣️ You: ' + input.value;
+                chatBox.appendChild(msg);
+                input.value = "";
+            }
+        }
+    </script>
+</body>
+</html>
