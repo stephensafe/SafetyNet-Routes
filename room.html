@@ -14,7 +14,7 @@
   <div id="chat-box" style="border: 1px solid #ccc; padding: 10px; height: 300px; overflow-y: auto; color: white;"></div>
 
   <input type="text" id="messageInput" placeholder="Type a message..." />
-  <button onclick="sendMessage()">Send</button>
+  <button id="sendBtn" disabled>Send</button>
 
   <script>
     // 🔐 Firebase Config
@@ -22,7 +22,7 @@
       apiKey: "AIzaSyAGWNcIpdhiQcgA3qFptlm_UR7iPpMVAss",
       authDomain: "safetynet-cf6ab.firebaseapp.com",
       projectId: "safetynet-cf6ab",
-      storageBucket: "safetynet-cf6ab.appspot.com", // 🔧 Fixed this!
+      storageBucket: "safetynet-cf6ab.appspot.com",
       messagingSenderId: "599329225472",
       appId: "1:599329225472:web:15962bcf527a8a896091e5"
     };
@@ -55,7 +55,10 @@
         localConnection.ondatachannel = event => {
           dataChannel = event.channel;
           dataChannel.onmessage = e => receiveMessage("Peer", e.data);
-          dataChannel.onopen = () => console.log("✅ DataChannel (Answerer) ready");
+          dataChannel.onopen = () => {
+            console.log("✅ DataChannel (Answerer) ready");
+            enableSend();
+          };
         };
 
         const offer = JSON.parse(snapshot.val().offer);
@@ -67,20 +70,21 @@
         // 📞 Caller
         dataChannel = localConnection.createDataChannel("chat");
         dataChannel.onmessage = e => receiveMessage("Peer", e.data);
-        dataChannel.onopen = () => console.log("✅ DataChannel (Caller) ready");
+        dataChannel.onopen = () => {
+          console.log("✅ DataChannel (Caller) ready");
+          enableSend();
+        };
 
         const offer = await localConnection.createOffer();
         await localConnection.setLocalDescription(offer);
         await roomRef.set({ offer: JSON.stringify(offer) });
       }
 
-      // Listen for remote ICE
       roomRef.child("candidates").on("child_added", snap => {
         const candidate = new RTCIceCandidate(JSON.parse(snap.val()));
         localConnection.addIceCandidate(candidate);
       });
 
-      // If caller, listen for answer
       roomRef.child("answer").on("value", async s => {
         if (s.exists() && !localConnection.currentRemoteDescription) {
           const answer = JSON.parse(s.val());
@@ -110,9 +114,21 @@
       const p = document.createElement("p");
       p.innerHTML = `<strong>${sender}:</strong> ${msg}`;
       box.appendChild(p);
+      box.scrollTop = box.scrollHeight;
       setTimeout(() => p.remove(), 10000);
     }
 
+    function enableSend() {
+      document.getElementById("sendBtn").disabled = false;
+    }
+
+    // Setup listeners
+    document.getElementById("sendBtn").addEventListener("click", sendMessage);
+    document.getElementById("messageInput").addEventListener("keypress", function (e) {
+      if (e.key === "Enter") sendMessage();
+    });
+
+    // Start
     setupConnection();
   </script>
 </body>
