@@ -5,16 +5,17 @@
     <title>Encrypted Room - SafetyNet</title>
     <link rel="stylesheet" href="style.css">
 </head>
-<body>
-    <h1>Welcome to your encrypted room 🔐</h1>
+<body style="background: black; color: white;">
+    <h1 style="color: gold;">Welcome to your encrypted room 🔐</h1>
     <p id="room-name"></p>
 
-    <div id="chat-box" style="border: 1px solid #ccc; padding: 10px; height: 300px; overflow-y: auto;"></div>
+    <div id="chat-box" style="border: 1px solid #ccc; padding: 10px; height: 300px; overflow-y: auto; margin-bottom: 10px;"></div>
 
     <input type="text" id="messageInput" placeholder="Type a message..." />
     <button onclick="sendMessage()">Send</button>
 
     <script>
+        // Get room from URL
         const params = new URLSearchParams(window.location.search);
         const room = params.get('room');
 
@@ -24,28 +25,22 @@
             document.getElementById('room-name').innerText = 'Room: ' + room;
         }
 
+        // Send message function
         function sendMessage() {
-    const input = document.getElementById('messageInput');
-    const chatBox = document.getElementById('chat-box');
+            const input = document.getElementById('messageInput');
+            const chatBox = document.getElementById('chat-box');
 
-    if (input.value.trim() !== "") {
-        const msg = document.createElement('p');
-        msg.textContent = '🗣️ You: ' + input.value;
-        msg.style.color = 'white'; // ← MAKE TEXT VISIBLE
-        chatBox.appendChild(msg);
-        input.value = "";
+            if (input.value.trim() !== "") {
+                const msg = document.createElement('p');
+                msg.textContent = '🗣️ You: ' + input.value;
+                msg.style.color = 'white';
+                chatBox.appendChild(msg);
+                input.value = "";
 
-        // Optional auto-delete after 10 sec
-        setTimeout(() => {
-            msg.remove();
-        }, 10000);
-    }
-}
-
-                // Optional: Auto-burn after 10 seconds
+                // Burn message after 10 seconds
                 setTimeout(() => {
                     msg.remove();
-                }, 10000); // 10,000 ms = 10 sec
+                }, 10000);
             }
         }
     </script>
