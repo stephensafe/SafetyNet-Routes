@@ -13,8 +13,6 @@
     <button onclick="createRoom()">Enter Room</button>
     <button onclick="generateRoom()">Generate Random</button>
 
-    <p id="room-link"></p>
-
     <script>
         function createRoom() {
             const roomName = document.getElementById('roomInput').value.trim();
@@ -23,18 +21,13 @@
                 return;
             }
             const link = window.location.origin + '/room/' + encodeURIComponent(roomName);
-            displayLink(link);
+            window.location.href = link;
         }
 
         function generateRoom() {
             const random = Math.random().toString(36).substring(2, 10);
             const link = window.location.origin + '/room/' + random;
-            displayLink(link);
-        }
-
-        function displayLink(link) {
-            const roomLink = document.getElementById('room-link');
-            roomLink.innerHTML = 'Room link: <a href="' + link + '" target="_blank">' + link + '</a>';
+            window.location.href = link;
         }
     </script>
 </body>
