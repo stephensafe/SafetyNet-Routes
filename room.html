@@ -15,7 +15,6 @@
     <button onclick="sendMessage()">Send</button>
 
     <script>
-        // Get room name from query string
         const params = new URLSearchParams(window.location.search);
         const room = params.get('room');
 
@@ -25,7 +24,6 @@
             document.getElementById('room-name').innerText = 'Room: ' + room;
         }
 
-        // Basic send message simulation
         function sendMessage() {
             const input = document.getElementById('messageInput');
             const chatBox = document.getElementById('chat-box');
@@ -35,6 +33,11 @@
                 msg.textContent = '🗣️ You: ' + input.value;
                 chatBox.appendChild(msg);
                 input.value = "";
+
+                // Optional: Auto-burn after 10 seconds
+                setTimeout(() => {
+                    msg.remove();
+                }, 10000); // 10,000 ms = 10 sec
             }
         }
     </script>
