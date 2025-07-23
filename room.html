@@ -1,17 +1,17 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
   <title>Encrypted Room - SafetyNet</title>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
   <h1>Welcome to your encrypted room 🔐</h1>
   <p id="room-name"></p>
 
-  <div id="chat-box" style="border: 1px solid #ccc; padding: 10px; height: 300px; overflow-y: auto;"></div>
+  <div id="chat-box" style="border: 1px solid #ccc; padding: 10px; height: 300px; overflow-y: auto; color: white;"></div>
 
   <input type="text" id="messageInput" placeholder="Type a message..." />
   <button onclick="sendMessage()">Send</button>
@@ -22,7 +22,7 @@
       apiKey: "AIzaSyAGWNcIpdhiQcgA3qFptlm_UR7iPpMVAss",
       authDomain: "safetynet-cf6ab.firebaseapp.com",
       projectId: "safetynet-cf6ab",
-      storageBucket: "safetynet-cf6ab.firebasestorage.app",
+      storageBucket: "safetynet-cf6ab.appspot.com", // 🔧 Fixed this!
       messagingSenderId: "599329225472",
       appId: "1:599329225472:web:15962bcf527a8a896091e5"
     };
@@ -30,11 +30,11 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    // 🌐 Get Room
     const params = new URLSearchParams(window.location.search);
     const roomId = params.get('room');
-    document.getElementById('room-name').innerText = "Room: " + roomId;
     const roomRef = db.ref("rooms/" + roomId);
+
+    document.getElementById('room-name').innerText = "Room: " + roomId;
 
     let localConnection;
     let dataChannel;
@@ -42,94 +42,75 @@
     async function setupConnection() {
       localConnection = new RTCPeerConnection();
 
-      // 📡 Send ICE candidates
-      localConnection.onicecandidate = e => {
-        if (e.candidate) {
-          console.log("📡 New ICE candidate sent");
-          roomRef.child('candidates').push(JSON.stringify(e.candidate));
+      localConnection.onicecandidate = event => {
+        if (event.candidate) {
+          roomRef.child("candidates").push(JSON.stringify(event.candidate));
         }
       };
 
-      // 📥 Log connection changes
-      localConnection.onconnectionstatechange = () => {
-        console.log("🔄 Connection State:", localConnection.connectionState);
-      };
+      const snapshot = await roomRef.once("value");
 
-      // 📞 Caller
-      dataChannel = localConnection.createDataChannel("chat");
-      dataChannel.onopen = () => console.log("✅ DataChannel is open");
-      dataChannel.onerror = e => console.error("❌ DataChannel error", e);
-      dataChannel.onmessage = e => receiveMessage("Peer", e.data);
-
-      // 🤝 Offer/Answer Logic
-      const snapshot = await roomRef.once('value');
       if (snapshot.exists()) {
-        // 🧏 Answerer
-        console.log("👂 Joining as Answerer");
-        roomRef.child('offer').once('value', async s => {
-          const offer = JSON.parse(s.val());
-          await localConnection.setRemoteDescription(new RTCSessionDescription(offer));
-          const answer = await localConnection.createAnswer();
-          await localConnection.setLocalDescription(answer);
-          roomRef.child('answer').set(JSON.stringify(answer));
-        });
-
-        localConnection.ondatachannel = e => {
-          console.log("✅ DataChannel received");
-          dataChannel = e.channel;
+        // 👂 Answerer
+        localConnection.ondatachannel = event => {
+          dataChannel = event.channel;
           dataChannel.onmessage = e => receiveMessage("Peer", e.data);
-          dataChannel.onopen = () => console.log("✅ DataChannel (Answerer) is open");
-        }
+          dataChannel.onopen = () => console.log("✅ DataChannel (Answerer) ready");
+        };
+
+        const offer = JSON.parse(snapshot.val().offer);
+        await localConnection.setRemoteDescription(new RTCSessionDescription(offer));
+        const answer = await localConnection.createAnswer();
+        await localConnection.setLocalDescription(answer);
+        await roomRef.child("answer").set(JSON.stringify(answer));
       } else {
         // 📞 Caller
-        console.log("📞 Creating as Caller");
+        dataChannel = localConnection.createDataChannel("chat");
+        dataChannel.onmessage = e => receiveMessage("Peer", e.data);
+        dataChannel.onopen = () => console.log("✅ DataChannel (Caller) ready");
+
         const offer = await localConnection.createOffer();
         await localConnection.setLocalDescription(offer);
-        roomRef.child('offer').set(JSON.stringify(offer));
+        await roomRef.set({ offer: JSON.stringify(offer) });
       }
 
-      // 🔁 Listen for remote ICE
-      roomRef.child('candidates').on('child_added', snap => {
+      // Listen for remote ICE
+      roomRef.child("candidates").on("child_added", snap => {
         const candidate = new RTCIceCandidate(JSON.parse(snap.val()));
         localConnection.addIceCandidate(candidate);
       });
 
-      // 🔁 Listen for Answer (if Caller)
-      roomRef.child('answer').on('value', async s => {
-        if (!localConnection.currentRemoteDescription && s.val()) {
+      // If caller, listen for answer
+      roomRef.child("answer").on("value", async s => {
+        if (s.exists() && !localConnection.currentRemoteDescription) {
           const answer = JSON.parse(s.val());
           await localConnection.setRemoteDescription(new RTCSessionDescription(answer));
         }
       });
     }
 
-    // 💬 Send message
     function sendMessage() {
       const input = document.getElementById('messageInput');
-      const message = input.value.trim();
-      if (message && dataChannel && dataChannel.readyState === "open") {
-        console.log("📤 Sending:", message);
-        dataChannel.send(message);
-        displayMessage("You", message);
+      const msg = input.value.trim();
+      if (msg && dataChannel && dataChannel.readyState === "open") {
+        dataChannel.send(msg);
+        displayMessage("You", msg);
         input.value = "";
       } else {
-        console.warn("⚠️ DataChannel not open");
+        alert("Connection not ready or message empty.");
       }
     }
 
-    // 📥 Display incoming
     function receiveMessage(sender, msg) {
       displayMessage(sender, msg);
     }
 
-    // 🧽 UI display & auto-delete
     function displayMessage(sender, msg) {
-      const chatBox = document.getElementById('chat-box');
-      const p = document.createElement('p');
-      p.innerHTML = `🔐 <strong>${sender}:</strong> ${msg}`;
-      p.style.color = 'white';
-      chatBox.appendChild(p);
-      setTimeout(() => p.remove(), 10000); // burn after 10 sec
+      const box = document.getElementById("chat-box");
+      const p = document.createElement("p");
+      p.innerHTML = `<strong>${sender}:</strong> ${msg}`;
+      box.appendChild(p);
+      setTimeout(() => p.remove(), 10000);
     }
 
     setupConnection();
