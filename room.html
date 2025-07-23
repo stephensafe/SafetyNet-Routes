@@ -25,14 +25,22 @@
         }
 
         function sendMessage() {
-            const input = document.getElementById('messageInput');
-            const chatBox = document.getElementById('chat-box');
+    const input = document.getElementById('messageInput');
+    const chatBox = document.getElementById('chat-box');
 
-            if (input.value.trim() !== "") {
-                const msg = document.createElement('p');
-                msg.textContent = '🗣️ You: ' + input.value;
-                chatBox.appendChild(msg);
-                input.value = "";
+    if (input.value.trim() !== "") {
+        const msg = document.createElement('p');
+        msg.textContent = '🗣️ You: ' + input.value;
+        msg.style.color = 'white'; // ← MAKE TEXT VISIBLE
+        chatBox.appendChild(msg);
+        input.value = "";
+
+        // Optional auto-delete after 10 sec
+        setTimeout(() => {
+            msg.remove();
+        }, 10000);
+    }
+}
 
                 // Optional: Auto-burn after 10 seconds
                 setTimeout(() => {
