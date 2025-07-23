@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Start a Chat - SafetyNet</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <h1>Create or Generate Your Room</h1>
+    <p>Enter a custom room name or click below to auto-generate a secure one.</p>
+    <input type="text" placeholder="Enter room name..." />
+    <button onclick="generateRoom()">Generate</button>
+    <p id="room-link"></p>
+    <script>
+        function generateRoom() {
+            const random = Math.random().toString(36).substring(2, 10);
+            const link = window.location.origin + '/room/' + random;
+            document.getElementById('room-link').innerText = 'Room link: ' + link;
+        }
+    </script>
+</body>
+</html>
