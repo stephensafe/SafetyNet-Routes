@@ -1,126 +1,148 @@
-/* === GLOBAL STYLES === */
-body {
-  margin: 0;
-  padding: 0;
-  background-color: #000;
-  color: #fff;
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SafetyNet Encrypted Room</title>
+  <link rel="stylesheet" href="style.css" />
 
-/* === HEADER === */
-header {
-  background-color: maroon;
-  padding: 10px;
-  text-align: center;
-  border-bottom: 2px solid gold;
-}
+  <!-- Firebase SDKs (we’ll set up config next) -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+</head>
+<body>
+  <header>
+    <img id="logo" src="assets/safetynet-logo.jpeg" alt="SafetyNet Logo" />
+  </header>
 
-#logo {
-  max-width: 180px;
-  height: auto;
-}
+  <main>
+    <div class="chat-container">
+      <div id="roomTimer" class="room-timer">Room expires in: --:--</div>
+      <div id="messages" class="messages"></div>
 
-/* === CHAT CONTAINER === */
-.chat-container {
-  display: flex;
-  flex-direction: column;
-  max-width: 720px;
-  margin: 20px auto;
-  height: 80vh;
-  border: 2px solid maroon;
-  border-radius: 12px;
-  background-color: #111;
-  overflow: hidden;
-}
+      <div class="input-area">
+        <input type="text" id="messageInput" placeholder="Type your message..." autocomplete="off" />
+        <button onclick="sendMessage()">Send</button>
+      </div>
+    </div>
+  </main>
 
-/* === MESSAGE AREA === */
-.messages {
-  flex: 1;
-  padding: 15px;
-  overflow-y: auto;
-  background-color: #111;
-  border-bottom: 1px solid maroon;
-  display: flex;
-  flex-direction: column;
-}
+  <script>
+    // === 🧠 Firebase Config Placeholder ===
+    const firebaseConfig = {
+      apiKey: "YOUR_API_KEY",
+      authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+      databaseURL: "https://YOUR_PROJECT_ID.firebaseio.com",
+      projectId: "YOUR_PROJECT_ID",
+      storageBucket: "YOUR_PROJECT_ID.appspot.com",
+      messagingSenderId: "YOUR_SENDER_ID",
+      appId: "YOUR_APP_ID"
+    };
 
-.message {
-  max-width: 75%;
-  margin-bottom: 10px;
-  padding: 10px 14px;
-  background-color: #222;
-  border-radius: 8px;
-  font-size: 0.95em;
-  word-wrap: break-word;
-  transition: opacity 0.3s ease;
-  position: relative;
-}
+    // === ⚙️ Initialize Firebase ===
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
 
-.message.own {
-  background-color: maroon;
-  align-self: flex-end;
-}
+    // === 🔐 Room and User Info ===
+    const urlParams = new URLSearchParams(window.location.search);
+    const roomId = urlParams.get('room') || 'default-room';
+    const userId = 'user-' + Math.floor(Math.random() * 100000);
+    const roomRef = db.ref(`rooms/${roomId}`);
+    const messagesRef = roomRef.child('messages');
+    const EXPIRE_MS = 30 * 60 * 1000; // 30 minutes
 
-/* === INPUT AREA === */
-.input-area {
-  display: flex;
-  padding: 12px;
-  background-color: #000;
-  border-top: 1px solid maroon;
-}
+    let roomTimerInterval;
 
-.input-area input[type="text"] {
-  flex: 1;
-  padding: 12px;
-  font-size: 1em;
-  border: none;
-  border-radius: 8px 0 0 8px;
-  background-color: #222;
-  color: white;
-  outline: none;
-}
+    function startRoomTimer(createdAt) {
+      const roomTimerEl = document.getElementById('roomTimer');
 
-.input-area button {
-  padding: 12px 20px;
-  font-size: 1em;
-  background-color: gold;
-  color: black;
-  border: none;
-  border-radius: 0 8px 8px 0;
-  cursor: pointer;
-  transition: background-color 0.3s ease;
-}
+      roomTimerInterval = setInterval(() => {
+        const now = Date.now();
+        const diff = EXPIRE_MS - (now - createdAt);
 
-.input-area button:hover {
-  background-color: #d4af37;
-}
+        if (diff <= 0) {
+          clearInterval(roomTimerInterval);
+          expireRoom();
+          return;
+        }
 
-/* === SCROLLBAR STYLING (optional) === */
-.messages::-webkit-scrollbar {
-  width: 8px;
-}
+        const mins = Math.floor(diff / 60000);
+        const secs = Math.floor((diff % 60000) / 1000);
+        roomTimerEl.textContent = `Room expires in: ${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+      }, 1000);
+    }
 
-.messages::-webkit-scrollbar-thumb {
-  background-color: maroon;
-  border-radius: 4px;
-}
+    function expireRoom() {
+      document.getElementById('roomTimer').textContent = "⏳ This room has expired";
+      document.getElementById('messageInput').disabled = true;
+      document.querySelector('.input-area button').disabled = true;
+      messagesRef.off(); // Stop receiving messages
 
-/* === MEDIA QUERIES === */
-@media screen and (max-width: 600px) {
-  .chat-container {
-    margin: 10px;
-    height: 90vh;
-  }
+      // Optionally delete room from Firebase
+      db.ref(`rooms/${roomId}`).remove();
+    }
 
-  .input-area input[type="text"] {
-    font-size: 0.9em;
-  }
+    function displayMessage(messageText, messageId, isOwnMessage = false) {
+      const messageDiv = document.createElement('div');
+      messageDiv.className = isOwnMessage ? 'message own' : 'message';
+      messageDiv.id = `msg-${messageId}`;
+      messageDiv.textContent = messageText;
+      document.getElementById('messages').appendChild(messageDiv);
+      scrollToBottom();
 
-  .input-area button {
-    font-size: 0.9em;
-  }
+      // 🔥 Remove after 30 seconds
+      setTimeout(() => {
+        const msg = document.getElementById(`msg-${messageId}`);
+        if (msg) {
+          msg.remove();
+          messagesRef.child(messageId).remove();
+        }
+      }, 30000);
+    }
 
-  .message {
-    font-size: 0.9em;
-  }
-}
+    function sendMessage() {
+      const messageInput = document.getElementById('messageInput');
+      const messageText = messageInput.value.trim();
+      if (messageText === '') return;
+
+      const messageId = messagesRef.push().key;
+      const messageData = {
+        text: messageText,
+        timestamp: Date.now(),
+        sender: userId
+      };
+
+      messagesRef.child(messageId).set(messageData);
+      displayMessage(messageText, messageId, true);
+      messageInput.value = '';
+    }
+
+    function scrollToBottom() {
+      const messagesDiv = document.getElementById('messages');
+      messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    }
+
+    // === 🕒 Room Init & Listener ===
+    roomRef.once('value').then(snapshot => {
+      const data = snapshot.val();
+
+      if (!data || !data.createdAt) {
+        const createdAt = Date.now();
+        roomRef.set({ createdAt }); // new room
+        startRoomTimer(createdAt);
+      } else {
+        startRoomTimer(data.createdAt);
+      }
+
+      // 👂 Listen for new messages
+      messagesRef.on('child_added', (snapshot) => {
+        const message = snapshot.val();
+        const messageId = snapshot.key;
+        if (message.sender !== userId) {
+          displayMessage(message.text, messageId, false);
+        }
+      });
+    });
+  </script>
+</body>
+</html>
