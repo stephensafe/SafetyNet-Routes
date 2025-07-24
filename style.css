@@ -1,148 +1,104 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>SafetyNet Encrypted Room</title>
-  <link rel="stylesheet" href="style.css" />
+/* Reset & base styling */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
 
-  <!-- Firebase SDKs (we’ll set up config next) -->
-  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
-</head>
-<body>
-  <header>
-    <img id="logo" src="assets/safetynet-logo.jpeg" alt="SafetyNet Logo" />
-  </header>
+body {
+  background-color: #0d0d0d;
+  color: #f5f5f5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 20px;
+}
 
-  <main>
-    <div class="chat-container">
-      <div id="roomTimer" class="room-timer">Room expires in: --:--</div>
-      <div id="messages" class="messages"></div>
+/* Main container */
+.container {
+  background-color: #1a1a1a;
+  border: 2px solid maroon;
+  border-radius: 12px;
+  max-width: 500px;
+  width: 100%;
+  padding: 30px 20px;
+  box-shadow: 0 0 10px rgba(255, 215, 0, 0.2);
+  text-align: center;
+}
 
-      <div class="input-area">
-        <input type="text" id="messageInput" placeholder="Type your message..." autocomplete="off" />
-        <button onclick="sendMessage()">Send</button>
-      </div>
-    </div>
-  </main>
+/* Logo */
+.logo {
+  max-width: 120px;
+  height: auto;
+  margin: 0 auto 20px auto;
+  display: block;
+}
 
-  <script>
-    // === 🧠 Firebase Config Placeholder ===
-    const firebaseConfig = {
-      apiKey: "YOUR_API_KEY",
-      authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-      databaseURL: "https://YOUR_PROJECT_ID.firebaseio.com",
-      projectId: "YOUR_PROJECT_ID",
-      storageBucket: "YOUR_PROJECT_ID.appspot.com",
-      messagingSenderId: "YOUR_SENDER_ID",
-      appId: "YOUR_APP_ID"
-    };
+/* Headline */
+h1 {
+  font-size: 24px;
+  color: gold;
+  margin-bottom: 20px;
+}
 
-    // === ⚙️ Initialize Firebase ===
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.database();
+/* Chat container */
+#chat-container {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
 
-    // === 🔐 Room and User Info ===
-    const urlParams = new URLSearchParams(window.location.search);
-    const roomId = urlParams.get('room') || 'default-room';
-    const userId = 'user-' + Math.floor(Math.random() * 100000);
-    const roomRef = db.ref(`rooms/${roomId}`);
-    const messagesRef = roomRef.child('messages');
-    const EXPIRE_MS = 30 * 60 * 1000; // 30 minutes
+#messages {
+  background-color: #2a2a2a;
+  border: 1px solid #333;
+  border-radius: 8px;
+  height: 300px;
+  overflow-y: auto;
+  padding: 10px;
+  text-align: left;
+  margin-bottom: 10px;
+}
 
-    let roomTimerInterval;
+#messages p {
+  background-color: #3a3a3a;
+  padding: 8px 12px;
+  margin-bottom: 6px;
+  border-radius: 6px;
+  color: #f1f1f1;
+  word-wrap: break-word;
+}
 
-    function startRoomTimer(createdAt) {
-      const roomTimerEl = document.getElementById('roomTimer');
+/* Input & send button */
+#messageInput {
+  padding: 10px;
+  border: none;
+  border-radius: 6px;
+  font-size: 16px;
+  width: 100%;
+  background-color: #2a2a2a;
+  color: #fff;
+}
 
-      roomTimerInterval = setInterval(() => {
-        const now = Date.now();
-        const diff = EXPIRE_MS - (now - createdAt);
+#sendBtn {
+  background-color: maroon;
+  color: gold;
+  border: none;
+  padding: 10px;
+  border-radius: 6px;
+  font-size: 16px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
 
-        if (diff <= 0) {
-          clearInterval(roomTimerInterval);
-          expireRoom();
-          return;
-        }
+#sendBtn:hover {
+  background-color: #8b0000;
+}
 
-        const mins = Math.floor(diff / 60000);
-        const secs = Math.floor((diff % 60000) / 1000);
-        roomTimerEl.textContent = `Room expires in: ${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
-      }, 1000);
-    }
-
-    function expireRoom() {
-      document.getElementById('roomTimer').textContent = "⏳ This room has expired";
-      document.getElementById('messageInput').disabled = true;
-      document.querySelector('.input-area button').disabled = true;
-      messagesRef.off(); // Stop receiving messages
-
-      // Optionally delete room from Firebase
-      db.ref(`rooms/${roomId}`).remove();
-    }
-
-    function displayMessage(messageText, messageId, isOwnMessage = false) {
-      const messageDiv = document.createElement('div');
-      messageDiv.className = isOwnMessage ? 'message own' : 'message';
-      messageDiv.id = `msg-${messageId}`;
-      messageDiv.textContent = messageText;
-      document.getElementById('messages').appendChild(messageDiv);
-      scrollToBottom();
-
-      // 🔥 Remove after 30 seconds
-      setTimeout(() => {
-        const msg = document.getElementById(`msg-${messageId}`);
-        if (msg) {
-          msg.remove();
-          messagesRef.child(messageId).remove();
-        }
-      }, 30000);
-    }
-
-    function sendMessage() {
-      const messageInput = document.getElementById('messageInput');
-      const messageText = messageInput.value.trim();
-      if (messageText === '') return;
-
-      const messageId = messagesRef.push().key;
-      const messageData = {
-        text: messageText,
-        timestamp: Date.now(),
-        sender: userId
-      };
-
-      messagesRef.child(messageId).set(messageData);
-      displayMessage(messageText, messageId, true);
-      messageInput.value = '';
-    }
-
-    function scrollToBottom() {
-      const messagesDiv = document.getElementById('messages');
-      messagesDiv.scrollTop = messagesDiv.scrollHeight;
-    }
-
-    // === 🕒 Room Init & Listener ===
-    roomRef.once('value').then(snapshot => {
-      const data = snapshot.val();
-
-      if (!data || !data.createdAt) {
-        const createdAt = Date.now();
-        roomRef.set({ createdAt }); // new room
-        startRoomTimer(createdAt);
-      } else {
-        startRoomTimer(data.createdAt);
-      }
-
-      // 👂 Listen for new messages
-      messagesRef.on('child_added', (snapshot) => {
-        const message = snapshot.val();
-        const messageId = snapshot.key;
-        if (message.sender !== userId) {
-          displayMessage(message.text, messageId, false);
-        }
-      });
-    });
-  </script>
-</body>
-</html>
+/* Note */
+.note {
+  margin-top: 15px;
+  font-size: 14px;
+  color: #bbbbbb;
+}
