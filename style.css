@@ -1,45 +1,126 @@
+/* === GLOBAL STYLES === */
 body {
-  background-color: black;
-  color: gold;
-  font-family: sans-serif;
-  text-align: center;
   margin: 0;
   padding: 0;
+  background-color: #000;
+  color: #fff;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
-.logo-container img {
-  width: 80%;
-  max-width: 300px;
-  height: auto;
-  margin: 20px auto;
-  display: block;
-}
-
-.nav-buttons {
-  display: flex;
-  justify-content: center;
-  gap: 10px;
-  margin-top: 20px;
-  flex-wrap: wrap;
-}
-
-.btn {
+/* === HEADER === */
+header {
   background-color: maroon;
-  color: gold;
-  padding: 10px 20px;
-  border: 2px solid gold;
-  border-radius: 5px;
-  text-decoration: none;
-  font-weight: bold;
-  transition: background 0.3s;
+  padding: 10px;
+  text-align: center;
+  border-bottom: 2px solid gold;
 }
 
-.btn:hover {
+#logo {
+  max-width: 180px;
+  height: auto;
+}
+
+/* === CHAT CONTAINER === */
+.chat-container {
+  display: flex;
+  flex-direction: column;
+  max-width: 720px;
+  margin: 20px auto;
+  height: 80vh;
+  border: 2px solid maroon;
+  border-radius: 12px;
+  background-color: #111;
+  overflow: hidden;
+}
+
+/* === MESSAGE AREA === */
+.messages {
+  flex: 1;
+  padding: 15px;
+  overflow-y: auto;
+  background-color: #111;
+  border-bottom: 1px solid maroon;
+  display: flex;
+  flex-direction: column;
+}
+
+.message {
+  max-width: 75%;
+  margin-bottom: 10px;
+  padding: 10px 14px;
+  background-color: #222;
+  border-radius: 8px;
+  font-size: 0.95em;
+  word-wrap: break-word;
+  transition: opacity 0.3s ease;
+  position: relative;
+}
+
+.message.own {
+  background-color: maroon;
+  align-self: flex-end;
+}
+
+/* === INPUT AREA === */
+.input-area {
+  display: flex;
+  padding: 12px;
+  background-color: #000;
+  border-top: 1px solid maroon;
+}
+
+.input-area input[type="text"] {
+  flex: 1;
+  padding: 12px;
+  font-size: 1em;
+  border: none;
+  border-radius: 8px 0 0 8px;
+  background-color: #222;
+  color: white;
+  outline: none;
+}
+
+.input-area button {
+  padding: 12px 20px;
+  font-size: 1em;
   background-color: gold;
-  color: maroon;
+  color: black;
+  border: none;
+  border-radius: 0 8px 8px 0;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
 }
 
-.welcome-text {
-  margin-top: 40px;
-  font-size: 1.5em;
+.input-area button:hover {
+  background-color: #d4af37;
+}
+
+/* === SCROLLBAR STYLING (optional) === */
+.messages::-webkit-scrollbar {
+  width: 8px;
+}
+
+.messages::-webkit-scrollbar-thumb {
+  background-color: maroon;
+  border-radius: 4px;
+}
+
+/* === MEDIA QUERIES === */
+@media screen and (max-width: 600px) {
+  .chat-container {
+    margin: 10px;
+    height: 90vh;
+  }
+
+  .input-area input[type="text"] {
+    font-size: 0.9em;
+  }
+
+  .input-area button {
+    font-size: 0.9em;
+  }
+
+  .message {
+    font-size: 0.9em;
+  }
 }
