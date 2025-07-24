@@ -2,105 +2,85 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>SafetyNet Encrypted Room</title>
-  <link rel="stylesheet" href="style.css" />
-
-  <!-- Firebase -->
-  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>SafetyNet Burn Room</title>
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <header>
-    <img id="logo" src="assets/safetynet-logo.jpeg" alt="SafetyNet Logo" />
-  </header>
-
-  <main>
-    <div class="chat-container">
-      <div id="messages" class="messages"></div>
-
-      <div class="input-area">
-        <input type="text" id="messageInput" placeholder="Type your message..." autocomplete="off" />
-        <button onclick="sendMessage()">Send</button>
-      </div>
+  <div class="container">
+    <img src="assets/safetynet-logo.jpeg" alt="SafetyNet Logo" class="logo" />
+    <h1>Encrypted Burn Room 🔥</h1>
+    
+    <div id="chat-container">
+      <div id="messages"></div>
+      <input type="text" id="messageInput" placeholder="Type your message..." />
+      <button id="sendBtn">Send</button>
     </div>
-  </main>
 
-  <script>
-    // 🔐 Replace with your actual Firebase config
+    <p class="note">This room and all messages will self-destruct in 30 minutes.</p>
+  </div>
+
+  <!-- Firebase SDK -->
+  <script type="module">
+    // Import Firebase modules
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
+    import { getDatabase, ref, push, onChildAdded, remove, set } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
+
+    // Firebase config
     const firebaseConfig = {
-      apiKey: "YOUR_API_KEY",
-      authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-      databaseURL: "https://YOUR_PROJECT_ID.firebaseio.com",
-      projectId: "YOUR_PROJECT_ID",
-      storageBucket: "YOUR_PROJECT_ID.appspot.com",
-      messagingSenderId: "YOUR_SENDER_ID",
-      appId: "YOUR_APP_ID"
+      apiKey: "AIzaSyAGWNcIpdhiQcgA3qFptlm_UR7iPpMVAss",
+      authDomain: "safetynet-cf6ab.firebaseapp.com",
+      databaseURL: "https://safetynet-cf6ab-default-rtdb.firebaseio.com",
+      projectId: "safetynet-cf6ab",
+      storageBucket: "safetynet-cf6ab.appspot.com",
+      messagingSenderId: "599329225472",
+      appId: "1:599329225472:web:15962bcf527a8a896091e5"
     };
 
-    // Initialize Firebase
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.database();
+    // Init Firebase
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+    const roomId = new URLSearchParams(window.location.search).get('room') || 'default-room';
+    const roomRef = ref(db, `rooms/${roomId}/messages`);
 
-    // 🌐 Get Room ID from URL (e.g. chat.html?room=abc123)
-    const urlParams = new URLSearchParams(window.location.search);
-    const roomId = urlParams.get('room') || 'default-room';
+    // Expiry: delete room after 30 minutes
+    const burnTimerRef = ref(db, `rooms/${roomId}/expiresAt`);
+    const now = Date.now();
+    const expireAt = now + 30 * 60 * 1000; // 30 minutes
+    set(burnTimerRef, expireAt);
 
-    // 🔑 Temporary user ID (anonymous)
-    const userId = 'user-' + Math.floor(Math.random() * 100000);
-
-    // 🔥 Display messages + auto-delete after 30s
-    function displayMessage(messageText, messageId, isOwnMessage = false) {
-      const messageDiv = document.createElement('div');
-      messageDiv.className = isOwnMessage ? 'message own' : 'message';
-      messageDiv.id = `msg-${messageId}`;
-      messageDiv.textContent = messageText;
-
-      document.getElementById('messages').appendChild(messageDiv);
-      scrollToBottom();
-
-      setTimeout(() => {
-        const msg = document.getElementById(`msg-${messageId}`);
-        if (msg) {
-          msg.remove();
-          db.ref(`rooms/${roomId}/messages/${messageId}`).remove(); // Delete from Firebase
-        }
-      }, 30000); // 30 seconds
-    }
-
-    // ✉️ Send message
-    function sendMessage() {
-      const messageInput = document.getElementById('messageInput');
-      const messageText = messageInput.value.trim();
-      if (messageText === '') return;
-
-      const messageId = db.ref().push().key;
-      const messageData = {
-        text: messageText,
-        timestamp: Date.now(),
-        sender: userId
-      };
-
-      db.ref(`rooms/${roomId}/messages/${messageId}`).set(messageData);
-      displayMessage(messageText, messageId, true);
-      messageInput.value = '';
-    }
-
-    // 📥 Listen for incoming messages
-    db.ref(`rooms/${roomId}/messages`).on('child_added', (snapshot) => {
-      const message = snapshot.val();
-      const messageId = snapshot.key;
-
-      // Prevent duplicate render of own messages
-      if (message.sender !== userId) {
-        displayMessage(message.text, messageId, false);
+    // Optional: background interval to auto-destroy room after expiry (for display only)
+    setInterval(() => {
+      if (Date.now() >= expireAt) {
+        remove(ref(db, `rooms/${roomId}`));
+        alert("This room has been burned.");
+        window.location.href = "/"; // redirect to home
       }
-    });
+    }, 5000);
 
-    function scrollToBottom() {
-      const messagesDiv = document.getElementById('messages');
+    // Handle sending messages
+    const sendBtn = document.getElementById("sendBtn");
+    const input = document.getElementById("messageInput");
+    sendBtn.onclick = () => {
+      const text = input.value.trim();
+      if (text !== "") {
+        push(roomRef, {
+          text,
+          timestamp: Date.now()
+        });
+        input.value = "";
+      }
+    };
+
+    // Display messages
+    const messagesDiv = document.getElementById("messages");
+    onChildAdded(roomRef, (snapshot) => {
+      const msg = snapshot.val();
+      const p = document.createElement("p");
+      p.textContent = msg.text;
+      messagesDiv.appendChild(p);
       messagesDiv.scrollTop = messagesDiv.scrollHeight;
-    }
+    });
   </script>
 </body>
 </html>
