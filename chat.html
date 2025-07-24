@@ -1,34 +1,106 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>Start a Chat - SafetyNet</title>
-    <link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SafetyNet Encrypted Room</title>
+  <link rel="stylesheet" href="style.css" />
+
+  <!-- Firebase -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
 </head>
 <body>
-    <h1>Create or Generate Your Room</h1>
-    <p>Enter a custom room name or click below to auto-generate a secure one.</p>
+  <header>
+    <img id="logo" src="assets/safetynet-logo.jpeg" alt="SafetyNet Logo" />
+  </header>
 
-    <input type="text" id="roomInput" placeholder="Enter room name..." />
-    <button onclick="createRoom()">Enter Room</button>
-    <button onclick="generateRoom()">Generate Random</button>
+  <main>
+    <div class="chat-container">
+      <div id="messages" class="messages"></div>
 
-    <script>
-        function createRoom() {
-            const roomName = document.getElementById('roomInput').value.trim();
-            if (!roomName) {
-                alert("Please enter a room name.");
-                return;
-            }
-            const link = window.location.origin + '/room.html?room=' + encodeURIComponent(roomName);
-            window.location.href = link; // Redirect
+      <div class="input-area">
+        <input type="text" id="messageInput" placeholder="Type your message..." autocomplete="off" />
+        <button onclick="sendMessage()">Send</button>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    // 🔐 Replace with your actual Firebase config
+    const firebaseConfig = {
+      apiKey: "YOUR_API_KEY",
+      authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+      databaseURL: "https://YOUR_PROJECT_ID.firebaseio.com",
+      projectId: "YOUR_PROJECT_ID",
+      storageBucket: "YOUR_PROJECT_ID.appspot.com",
+      messagingSenderId: "YOUR_SENDER_ID",
+      appId: "YOUR_APP_ID"
+    };
+
+    // Initialize Firebase
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    // 🌐 Get Room ID from URL (e.g. chat.html?room=abc123)
+    const urlParams = new URLSearchParams(window.location.search);
+    const roomId = urlParams.get('room') || 'default-room';
+
+    // 🔑 Temporary user ID (anonymous)
+    const userId = 'user-' + Math.floor(Math.random() * 100000);
+
+    // 🔥 Display messages + auto-delete after 30s
+    function displayMessage(messageText, messageId, isOwnMessage = false) {
+      const messageDiv = document.createElement('div');
+      messageDiv.className = isOwnMessage ? 'message own' : 'message';
+      messageDiv.id = `msg-${messageId}`;
+      messageDiv.textContent = messageText;
+
+      document.getElementById('messages').appendChild(messageDiv);
+      scrollToBottom();
+
+      setTimeout(() => {
+        const msg = document.getElementById(`msg-${messageId}`);
+        if (msg) {
+          msg.remove();
+          db.ref(`rooms/${roomId}/messages/${messageId}`).remove(); // Delete from Firebase
         }
+      }, 30000); // 30 seconds
+    }
 
-        function generateRoom() {
-            const random = Math.random().toString(36).substring(2, 10);
-            const link = window.location.origin + '/room.html?room=' + random;
-            window.location.href = link; // Redirect
-        }
-    </script>
+    // ✉️ Send message
+    function sendMessage() {
+      const messageInput = document.getElementById('messageInput');
+      const messageText = messageInput.value.trim();
+      if (messageText === '') return;
+
+      const messageId = db.ref().push().key;
+      const messageData = {
+        text: messageText,
+        timestamp: Date.now(),
+        sender: userId
+      };
+
+      db.ref(`rooms/${roomId}/messages/${messageId}`).set(messageData);
+      displayMessage(messageText, messageId, true);
+      messageInput.value = '';
+    }
+
+    // 📥 Listen for incoming messages
+    db.ref(`rooms/${roomId}/messages`).on('child_added', (snapshot) => {
+      const message = snapshot.val();
+      const messageId = snapshot.key;
+
+      // Prevent duplicate render of own messages
+      if (message.sender !== userId) {
+        displayMessage(message.text, messageId, false);
+      }
+    });
+
+    function scrollToBottom() {
+      const messagesDiv = document.getElementById('messages');
+      messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    }
+  </script>
 </body>
 </html>
